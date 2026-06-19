@@ -12,7 +12,7 @@
   --red: #E74C3C;
   --green: #2ECC71;
   --radius: 16px;
-  --sheet-peek: 120px;
+  --sheet-peek: 0px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; overflow: hidden; font-family: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', sans-serif; background: #eee; }
@@ -69,7 +69,7 @@ svg#map { display: block; transform-origin: 0 0; will-change: transform; }
   position: fixed; right: 16px; z-index: 90;
   display: flex; flex-direction: column; gap: 10px;
   transition: bottom 0.35s cubic-bezier(.4,0,.2,1);
-  bottom: calc(var(--sheet-peek) + 16px);
+  bottom: 74px;
 }
 .fab {
   width: 48px; height: 48px; border-radius: 50%;
@@ -197,8 +197,32 @@ svg#map { display: block; transform-origin: 0 0; will-change: transform; }
   box-shadow: 0 4px 16px rgba(0,0,0,.2);
 }
 
-/* 시트 peek / open 상태 */
-.sheet { transform: translateY(calc(100% - var(--sheet-peek))); }
+/* 하단 시트 열기 버튼 */
+.sheet-toggle {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  transform: translateX(-50%);
+  z-index: 95;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--dark);
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  cursor: pointer;
+  transition: opacity .2s, transform .2s;
+}
+.sheet-toggle.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(18px);
+}
+
+/* 시트 숨김 / open 상태 */
+.sheet { transform: translateY(100%); }
 .sheet.open { transform: translateY(0); }
 .sheet.half { transform: translateY(40%); }
 
@@ -237,6 +261,9 @@ svg#map { display: block; transform-origin: 0 0; will-change: transform; }
     <span class="badge" id="wbadge"></span>
   </button>
 </div>
+
+<!-- 하단 시트 열기 버튼 -->
+<button class="sheet-toggle" id="sheetToggle" onclick="openSheet()">▲ 부스 목록 열기</button>
 
 <!-- 하단 시트 -->
 <div class="sheet" id="sheet">
@@ -522,11 +549,18 @@ function switchTab(t){
 function openWishTab(){switchTab('wish');}
 
 // ── 시트 동작 ──
+function isSheetVisible(){return sheet.classList.contains('open')||sheet.classList.contains('half');}
+function updateSheetToggle(){
+  const t=document.getElementById('sheetToggle');
+  if(t)t.classList.toggle('hidden',isSheetVisible());
+}
 function openSheet(){sheet.classList.add('half');sheet.classList.remove('open');sheetOpen=true;updateFabBottom();}
 function collapseSheet(){sheet.classList.remove('open','half');sheetOpen=false;updateFabBottom();}
 function updateFabBottom(){
-  const peek=sheetOpen?window.innerHeight*0.4+16:130;
-  document.getElementById('fabGroup').style.bottom=peek+'px';
+  const visible=isSheetVisible();
+  const bottom=visible?window.innerHeight*0.4+16:74;
+  document.getElementById('fabGroup').style.bottom=bottom+'px';
+  updateSheetToggle();
 }
 
 // 시트 드래그
@@ -538,6 +572,7 @@ window.addEventListener('touchmove',e=>{
   const dy=e.touches[0].clientY-sheetStartY;
   if(dy<-40){sheet.classList.add('open');sheet.classList.remove('half');}
   else if(dy>40){sheet.classList.remove('open');if(dy>120)sheet.classList.remove('half');else sheet.classList.add('half');}
+  sheetOpen=isSheetVisible();
   updateFabBottom();
 },{passive:true});
 window.addEventListener('touchend',()=>{sheetDragging=false;});
@@ -546,6 +581,7 @@ handle.addEventListener('click',()=>{
   if(sheet.classList.contains('open')){sheet.classList.remove('open');sheet.classList.add('half');}
   else if(sheet.classList.contains('half')){sheet.classList.add('open');sheet.classList.remove('half');}
   else{sheet.classList.add('half');}
+  sheetOpen=isSheetVisible();
   updateFabBottom();
 });
 
@@ -608,9 +644,9 @@ document.addEventListener('click',e=>{
 });
 
 buildMap();renderList();
-// 시트 초기 상태
-sheet.classList.add('half');updateFabBottom();
-window.addEventListener('resize',resetView);
+// 시트 초기 상태: 완전히 숨기고, 아래의 작은 버튼으로 필요할 때만 열기
+collapseSheet();
+window.addEventListener('resize',()=>{resetView();updateFabBottom();});
 </script>
 </body>
 </html>
